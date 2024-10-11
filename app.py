@@ -3,21 +3,6 @@ import json
 import requests
 from flask import Flask, render_template, request, jsonify
 
-# Ensure 'data' directory and 'bots.json' file exist
-def ensure_data_file():
-    data_dir = "data"
-    bots_file = os.path.join(data_dir, "bots.json")
-
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir)  # Create 'data' directory
-
-    if not os.path.exists(bots_file):
-        with open(bots_file, 'w') as f:
-            json.dump([], f)  # Initialize with an empty list
-
-# Call the function before Flask app starts
-ensure_data_file()
-
 app = Flask(__name__)
 ADMIN_PASSWORD = "scorpiPingIt"
 
@@ -39,10 +24,14 @@ def load_bots():
         bots = []
         for row in rows:
             try:
+                interval_value = row["Interval"]
+                # Handle case where interval is None
+                interval = int(interval_value) if interval_value is not None else 120  # Default to 120s if None
+                
                 bot = {
                     "name": row["Name"],  # Make sure this matches your actual column name
                     "url": row["URL"],  # Adjust this key to match your actual column name
-                    "interval": int(row["Interval"])  # Adjust this key to match your actual column name
+                    "interval": interval
                 }
                 bots.append(bot)
             except KeyError as e:
