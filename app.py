@@ -2,6 +2,7 @@ import os
 import json
 import requests
 from flask import Flask, render_template, request, jsonify
+import logging
 
 # Baserow API settings
 API_TOKEN = "QgkF5U1aamXYnwnahYpnlpjpqt7YyXjn"
@@ -49,13 +50,41 @@ def create_field(name, field_type):
         print(f"Error creating field '{name}':", response.text)
 
 # Load Bots from Baserow table
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+
+# Load Bots from API
 def load_bots():
-    response = requests.get(BASE_URL, headers=HEADERS)
+    api_token = "QgkF5U1aamXYnwnahYpnlpjpqt7YyXjn"
+    table_id = "370747"
+    url = f"https://api.baserow.io/api/database/rows/table/{table_id}/?user_field_names=true"
+
+    headers = {
+        "Authorization": f"Token {api_token}"
+    }
+
+    response = requests.get(url, headers=headers)
+
     if response.status_code == 200:
-        rows = response.json()['results']
-        return [{"name": row["Bot Name"], "url": row["URL"], "interval": row["Interval"]} for row in rows]
+        rows = response.json().get("results", [])
+        logging.debug(f"Fetched rows: {rows}")
+
+        # Use the actual keys from the fetched data
+        bots = []
+        for row in rows:
+            try:
+                bot = {
+                    "name": row["Bot Name"],  # Adjust this key to match the actual column name
+                    "url": row["URL"],        # Adjust this key to match the actual column name
+                    "interval": int(row["Interval"])  # Adjust this key to match the actual column name
+                }
+                bots.append(bot)
+            except KeyError as e:
+                logging.error(f"KeyError: Missing expected key {str(e)} in row: {row}")
+        
+        return bots
     else:
-        print("Error loading bots:", response.text)
+        logging.error(f"Error fetching data from API. Status code: {response.status_code}")
         return []
 
 # Save a new bot to Baserow
