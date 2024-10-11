@@ -20,7 +20,7 @@ ensure_data_file()
 
 
 app = Flask(__name__)
-ADMIN_PASSWORD = "your_admin_password_here"
+ADMIN_PASSWORD = "scorpiPingIt"
 
 # Load Bots from JSON File
 def load_bots():
