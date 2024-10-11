@@ -2,121 +2,70 @@ import os
 import json
 import requests
 from flask import Flask, render_template, request, jsonify
-import logging
 
-# Baserow API settings
+# Ensure 'data' directory and 'bots.json' file exist
+def ensure_data_file():
+    data_dir = "data"
+    bots_file = os.path.join(data_dir, "bots.json")
+
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)  # Create 'data' directory
+
+    if not os.path.exists(bots_file):
+        with open(bots_file, 'w') as f:
+            json.dump([], f)  # Initialize with an empty list
+
+# Call the function before Flask app starts
+ensure_data_file()
+
+app = Flask(__name__)
+ADMIN_PASSWORD = "scorpiPingIt"
+
+# API Token and Table ID
 API_TOKEN = "QgkF5U1aamXYnwnahYpnlpjpqt7YyXjn"
 TABLE_ID = "370747"
 BASE_URL = f"https://api.baserow.io/api/database/rows/table/{TABLE_ID}/"
-HEADERS = {"Authorization": f"Token {API_TOKEN}"}
-ADMIN_PASSWORD = "scorpiPingIt"
 
-app = Flask(__name__)
+headers = {
+    "Authorization": f"Token {API_TOKEN}",
+    "Content-Type": "application/json",
+}
 
-# Helper to check and create columns if needed (e.g., Bot Name, URL, Interval)
-def ensure_columns():
-    # Check existing fields in the table (GET /fields)
-    fields_url = f"https://api.baserow.io/api/database/fields/table/{TABLE_ID}/"
-    response = requests.get(fields_url, headers=HEADERS)
-    
-    if response.status_code == 200:
-        existing_fields = [field['name'] for field in response.json()]
-        
-        # List of fields we need
-        required_fields = {
-            "Bot Name": "text",
-            "URL": "text",
-            "Interval": "number"
-        }
-        
-        # Create missing fields
-        for field_name, field_type in required_fields.items():
-            if field_name not in existing_fields:
-                create_field(field_name, field_type)
-    else:
-        print("Error fetching existing fields:", response.text)
-
-# Create a column/field in the Baserow table
-def create_field(name, field_type):
-    field_creation_url = f"https://api.baserow.io/api/database/fields/table/{TABLE_ID}/"
-    field_data = {
-        "name": name,
-        "type": field_type,
-    }
-    response = requests.post(field_creation_url, headers=HEADERS, json=field_data)
-    if response.status_code == 200:
-        print(f"Field '{name}' created successfully.")
-    else:
-        print(f"Error creating field '{name}':", response.text)
-
-# Load Bots from Baserow table
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
-
-# Load Bots from API
+# Load Bots from Baserow API
 def load_bots():
-    api_token = "QgkF5U1aamXYnwnahYpnlpjpqt7YyXjn"
-    table_id = "370747"
-    url = f"https://api.baserow.io/api/database/rows/table/{table_id}/?user_field_names=true"
-
-    headers = {
-        "Authorization": f"Token {api_token}"
-    }
-
-    response = requests.get(url, headers=headers)
-
+    response = requests.get(BASE_URL + "?user_field_names=true", headers=headers)
     if response.status_code == 200:
         rows = response.json().get("results", [])
-        logging.debug(f"Fetched rows: {rows}")
-
-        # Use the actual keys from the fetched data
         bots = []
         for row in rows:
             try:
                 bot = {
-                    "name": row["Bot Name"],  # Adjust this key to match the actual column name
-                    "url": row["URL"],        # Adjust this key to match the actual column name
-                    "interval": int(row["Interval"])  # Adjust this key to match the actual column name
+                    "name": row["Name"],  # Make sure this matches your actual column name
+                    "url": row["URL"],  # Adjust this key to match your actual column name
+                    "interval": int(row["Interval"])  # Adjust this key to match your actual column name
                 }
                 bots.append(bot)
             except KeyError as e:
-                logging.error(f"KeyError: Missing expected key {str(e)} in row: {row}")
-        
+                print(f"KeyError: Missing expected key {str(e)} in row: {row}")
         return bots
     else:
-        logging.error(f"Error fetching data from API. Status code: {response.status_code}")
+        print(f"Error fetching data from API. Status code: {response.status_code}")
         return []
 
-# Save a new bot to Baserow
-def save_bot(name, url, interval):
+# Save Bots to Baserow API
+def save_bot_to_baserow(name, url, interval):
     data = {
-        "Bot Name": name,
-        "URL": url,
-        "Interval": int(interval)
+        "Name": name,      # Ensure the field name matches the Baserow column name
+        "URL": url,        # Ensure the field name matches the Baserow column name
+        "Interval": interval  # Ensure the field name matches the Baserow column name
     }
-    response = requests.post(BASE_URL, headers=HEADERS, json=data)
-    if response.status_code == 200:
-        print("Bot saved successfully.")
-    else:
-        print("Error saving bot:", response.text)
 
-# Delete a bot from Baserow
-def delete_bot_by_index(index):
-    # Fetch bots to get the row ID of the bot to delete
-    bots = load_bots()
-    if 0 <= index < len(bots):
-        row_id = bots[index]["id"]  # Fetch the row ID corresponding to the bot
-        delete_url = f"{BASE_URL}{row_id}/"
-        response = requests.delete(delete_url, headers=HEADERS)
-        if response.status_code == 204:
-            print(f"Bot at index {index} deleted successfully.")
-        else:
-            print("Error deleting bot:", response.text)
-    else:
-        print("Invalid bot index.")
+    response = requests.post(BASE_URL, headers=headers, json=data)
 
-# Ensure columns are created before starting the Flask app
-ensure_columns()
+    if response.status_code == 200 or response.status_code == 201:
+        print("Bot added successfully to Baserow!")
+    else:
+        print(f"Failed to add bot to Baserow. Status code: {response.status_code}, Response: {response.text}")
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -126,8 +75,7 @@ def index():
         url = request.form["url"]
         interval = request.form["interval"]
 
-        save_bot(name, url, interval)
-        bots = load_bots()
+        save_bot_to_baserow(name, url, interval)  # Save bot to Baserow
         return render_template("index.html", bots=bots, message="Bot added successfully!")
     
     return render_template("index.html", bots=bots)
@@ -136,8 +84,11 @@ def index():
 def delete_bot(index):
     data = request.get_json()
     if data["password"] == ADMIN_PASSWORD:
-        delete_bot_by_index(index)
-        return jsonify({"message": "Bot deleted successfully!"}), 200
+        bots = load_bots()
+        if 0 <= index < len(bots):
+            bots.pop(index)
+            save_bots(bots)
+            return jsonify({"message": "Bot deleted successfully!"}), 200
     return jsonify({"error": "Unauthorized or invalid index"}), 403
 
 # Expose the WSGI application
