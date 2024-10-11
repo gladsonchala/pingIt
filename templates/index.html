@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Bot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Add a New Bot</h1>
+        <form id="addBotForm" method="POST">
+            <div class="form-group">
+                <label for="name">Bot Name:</label>
+                <input type="text" id="name" name="name" placeholder="Bot Name" required>
+            </div>
+            <div class="form-group">
+                <label for="url">Bot URL:</label>
+                <input type="text" id="url" name="url" placeholder="Bot URL" required>
+            </div>
+            <div class="form-group">
+                <label for="interval">Ping Interval (seconds):</label>
+                <input type="number" id="interval" name="interval" placeholder="Interval" required>
+            </div>
+            <input class="button-outline button-large" type="submit" value="Submit">
+        </form>
+
+        <h2>Registered Bots</h2>
+        <ul class="bot-list">
+            {% for bot in bots %}
+                <li class="bot-item">
+                    <span class="bot-info">
+                        <strong>Name:</strong> {{ bot.name }}<br>
+                        <strong>URL:</strong> {{ bot.url }}<br>
+                        <strong>Interval:</strong> {{ bot.interval }} seconds
+                    </span>
+                    <button class="button-outline delete-btn" data-id="{{ loop.index }}">🗑️ Delete</button>
+                </li>
+            {% endfor %}
+        </ul>
+
+        <!-- Popup for Admin Password -->
+        <div id="adminModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Admin Verification</h2>
+                <form id="deleteForm">
+                    <input type="password" id="adminPassword" placeholder="Enter Admin Password" required>
+                    <input type="hidden" id="botIndex">
+                    <input class="button-outline button-large" type="submit" value="Confirm">
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
