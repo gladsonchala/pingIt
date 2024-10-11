@@ -60,6 +60,13 @@ def save_bot_to_baserow(name, url, interval):
     else:
         print(f"Failed to add bot to Baserow. Status code: {response.status_code}, Response: {response.text}")
 
+@app.route("/", methods=["GET"])
+def index():
+    # Your logic to load and display bots
+    bots = load_bots()
+    return render_template("index.html", bots=bots)
+
+
 @app.route("/", methods=["POST"])
 def add_bot():
     # Get form data
