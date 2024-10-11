@@ -1,3 +1,4 @@
 Flask==2.1.2
 gunicorn
 werkzeug==2.0.3
+requests
