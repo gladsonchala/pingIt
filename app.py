@@ -60,28 +60,34 @@ def save_bot_to_baserow(name, url, interval):
     else:
         print(f"Failed to add bot to Baserow. Status code: {response.status_code}, Response: {response.text}")
 
-@app.route("/", methods=["GET", "POST"])
-def index():
-    if request.method == "POST":
-        bot_name = request.form.get("name")
-        bot_url = request.form.get("url")
-        bot_interval = request.form.get("interval")
+@app.route("/", methods=["POST"])
+def add_bot():
+    # Get form data
+    bot_name = request.form.get("name")  # Name of the bot
+    bot_url = request.form.get("url")    # URL of the bot
+    bot_interval = request.form.get("interval")  # Interval in seconds
 
-        # Validate input
-        if not bot_name or not bot_url or not bot_interval:
-            return "Missing required fields", 400
+    # Validate input before saving the bot
+    if not bot_name or not bot_url or not bot_interval:
+        return "Missing required fields", 400
 
-        try:
-            bot_interval = int(bot_interval)
-        except ValueError:
-            return "Invalid interval", 400
+    try:
+        # Convert interval to integer and validate it
+        bot_interval = int(bot_interval)
+        if bot_interval <= 0:  # Check for a positive interval
+            return "Interval must be a positive integer", 400
+    except ValueError:
+        return "Invalid interval", 400
 
-        save_bot_to_baserow(bot_name, bot_url, bot_interval)
-        return redirect(url_for("index"))
+    # Ensure that we are not adding an empty bot
+    if bot_name.strip() == "" or bot_url.strip() == "":
+        return "Name and URL cannot be empty", 400
 
-    # GET request to load bots
-    bots = load_bots()
-    return render_template("index.html", bots=bots)
+    # Call the function to save the bot to Baserow
+    save_bot_to_baserow(bot_name, bot_url, bot_interval)
+
+    # After saving, redirect back to the main page (or wherever)
+    return redirect(url_for("index"))
 
 @app.route("/delete/<int:index>", methods=["POST"])
 def delete_bot(index):
