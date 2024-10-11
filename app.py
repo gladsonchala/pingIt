@@ -24,18 +24,26 @@ def load_bots():
         bots = []
         for row in rows:
             try:
-                interval_value = row["Interval"]
-                # Handle case where interval is None
-                interval = int(interval_value) if interval_value is not None else 120  # Default to 120s if None
+                interval_value = row.get("Interval")  # Safely get 'Interval' to avoid KeyErrors
                 
-                bot = {
-                    "name": row["Name"],  # Make sure this matches your actual column name
-                    "url": row["URL"],  # Adjust this key to match your actual column name
-                    "interval": interval
-                }
-                bots.append(bot)
+                # Handle case where 'Interval' is None or not a valid number
+                if interval_value is None or not isinstance(interval_value, (int, float, str)):
+                    interval = 120  # Default value if it's None or not a valid number
+                else:
+                    interval = int(interval_value)
+                
+                # Create bot entry only if 'Name' and 'URL' are valid
+                if row.get("Name") and row.get("URL"):
+                    bot = {
+                        "name": row["Name"],
+                        "url": row["URL"],
+                        "interval": interval
+                    }
+                    bots.append(bot)
             except KeyError as e:
                 print(f"KeyError: Missing expected key {str(e)} in row: {row}")
+            except ValueError as e:
+                print(f"ValueError: Could not convert 'Interval' to int in row: {row}")
         return bots
     else:
         print(f"Error fetching data from API. Status code: {response.status_code}")
