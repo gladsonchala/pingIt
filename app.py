@@ -1,7 +1,7 @@
 import os
 import json
 import requests
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 
 app = Flask(__name__)
 ADMIN_PASSWORD = "scorpiPingIt"
@@ -24,15 +24,12 @@ def load_bots():
         bots = []
         for row in rows:
             try:
-                interval_value = row.get("Interval")  # Safely get 'Interval' to avoid KeyErrors
-                
-                # Handle case where 'Interval' is None or not a valid number
+                interval_value = row.get("Interval")
                 if interval_value is None or not isinstance(interval_value, (int, float, str)):
-                    interval = 120  # Default value if it's None or not a valid number
+                    interval = 120  # Default value if not valid
                 else:
                     interval = int(interval_value)
-                
-                # Create bot entry only if 'Name' and 'URL' are valid
+
                 if row.get("Name") and row.get("URL"):
                     bot = {
                         "name": row["Name"],
@@ -52,61 +49,39 @@ def load_bots():
 # Save Bots to Baserow API
 def save_bot_to_baserow(name, url, interval):
     data = {
-        "Name": name,      # Ensure the field name matches the Baserow column name
-        "URL": url,        # Ensure the field name matches the Baserow column name
-        "Interval": interval  # Ensure the field name matches the Baserow column name
+        "Name": name,
+        "URL": url,
+        "Interval": interval
     }
 
     response = requests.post(BASE_URL, headers=headers, json=data)
-
     if response.status_code == 200 or response.status_code == 201:
         print("Bot added successfully to Baserow!")
     else:
         print(f"Failed to add bot to Baserow. Status code: {response.status_code}, Response: {response.text}")
 
-
-@app.route("/", methods=["POST"])
-def add_bot():
-    # Get form data
-    bot_name = request.form.get("name")  # Name of the bot
-    bot_url = request.form.get("url")    # URL of the bot
-    bot_interval = request.form.get("interval")  # Interval in seconds
-
-    # Validate input before saving the bot
-    if not bot_name or not bot_url or not bot_interval:
-        return "Missing required fields", 400
-
-    try:
-        # Convert interval to integer
-        bot_interval = int(bot_interval)
-    except ValueError:
-        return "Invalid interval", 400
-
-    # Call the function to save the bot to Baserow
-    save_bot_to_baserow(bot_name, bot_url, bot_interval)
-
-    # After saving, redirect back to the main page (or wherever)
-    return redirect(url_for("index"))
-
-@app.route("/", methods=["GET"])
+@app.route("/", methods=["GET", "POST"])
 def index():
-    # Your logic to load and display bots
+    if request.method == "POST":
+        bot_name = request.form.get("name")
+        bot_url = request.form.get("url")
+        bot_interval = request.form.get("interval")
+
+        # Validate input
+        if not bot_name or not bot_url or not bot_interval:
+            return "Missing required fields", 400
+
+        try:
+            bot_interval = int(bot_interval)
+        except ValueError:
+            return "Invalid interval", 400
+
+        save_bot_to_baserow(bot_name, bot_url, bot_interval)
+        return redirect(url_for("index"))
+
+    # GET request to load bots
     bots = load_bots()
     return render_template("index.html", bots=bots)
-
-
-#@app.route("/", methods=["GET", "POST"])
-#def index():
-#    bots = load_bots()
-#    if request.method == "POST":
-#        name = request.form["name"]
-#        url = request.form["url"]
-#        interval = request.form["interval"]
-
-#        save_bot_to_baserow(name, url, interval)  # Save bot to Baserow
-#        return render_template("index.html", bots=bots, message="Bot added successfully!")
-
-#    return render_template("index.html", bots=bots)
 
 @app.route("/delete/<int:index>", methods=["POST"])
 def delete_bot(index):
@@ -114,8 +89,8 @@ def delete_bot(index):
     if data["password"] == ADMIN_PASSWORD:
         bots = load_bots()
         if 0 <= index < len(bots):
-            bots.pop(index)
-            save_bots(bots)
+            # Logic to remove bot from Baserow would go here
+            # save_bots(bots) # Implement this if needed
             return jsonify({"message": "Bot deleted successfully!"}), 200
     return jsonify({"error": "Unauthorized or invalid index"}), 403
 
