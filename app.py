@@ -64,18 +64,49 @@ def save_bot_to_baserow(name, url, interval):
     else:
         print(f"Failed to add bot to Baserow. Status code: {response.status_code}, Response: {response.text}")
 
-@app.route("/", methods=["GET", "POST"])
-def index():
-    bots = load_bots()
-    if request.method == "POST":
-        name = request.form["name"]
-        url = request.form["url"]
-        interval = request.form["interval"]
 
-        save_bot_to_baserow(name, url, interval)  # Save bot to Baserow
-        return render_template("index.html", bots=bots, message="Bot added successfully!")
-    
+@app.route("/", methods=["POST"])
+def add_bot():
+    # Get form data
+    bot_name = request.form.get("name")  # Name of the bot
+    bot_url = request.form.get("url")    # URL of the bot
+    bot_interval = request.form.get("interval")  # Interval in seconds
+
+    # Validate input before saving the bot
+    if not bot_name or not bot_url or not bot_interval:
+        return "Missing required fields", 400
+
+    try:
+        # Convert interval to integer
+        bot_interval = int(bot_interval)
+    except ValueError:
+        return "Invalid interval", 400
+
+    # Call the function to save the bot to Baserow
+    save_bot_to_baserow(bot_name, bot_url, bot_interval)
+
+    # After saving, redirect back to the main page (or wherever)
+    return redirect(url_for("index"))
+
+@app.route("/", methods=["GET"])
+def index():
+    # Your logic to load and display bots
+    bots = load_bots()
     return render_template("index.html", bots=bots)
+
+
+#@app.route("/", methods=["GET", "POST"])
+#def index():
+#    bots = load_bots()
+#    if request.method == "POST":
+#        name = request.form["name"]
+#        url = request.form["url"]
+#        interval = request.form["interval"]
+
+#        save_bot_to_baserow(name, url, interval)  # Save bot to Baserow
+#        return render_template("index.html", bots=bots, message="Bot added successfully!")
+
+#    return render_template("index.html", bots=bots)
 
 @app.route("/delete/<int:index>", methods=["POST"])
 def delete_bot(index):
