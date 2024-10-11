@@ -53,9 +53,11 @@ def delete_bot(index):
             bots.pop(index)
             save_bots(bots)
             return jsonify({"message": "Bot deleted successfully!"}), 200
-        return jsonify({"error": "Bot not found."}), 404
-    return jsonify({"error": "Unauthorized."}), 403
+    return jsonify({"error": "Unauthorized or invalid index"}), 403
 
+# Expose the WSGI application
 if __name__ == "__main__":
-    # Update this line to allow the app to run on all interfaces
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+
+# This is for Vercel
+application = app
