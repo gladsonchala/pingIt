@@ -2,7 +2,6 @@ import os
 import json
 from flask import Flask, render_template, request, jsonify
 
-
 # Ensure 'data' directory and 'bots.json' file exist
 def ensure_data_file():
     data_dir = "data"
@@ -17,7 +16,6 @@ def ensure_data_file():
 
 # Call the function before Flask app starts
 ensure_data_file()
-
 
 app = Flask(__name__)
 ADMIN_PASSWORD = "scorpiPingIt"
@@ -54,8 +52,10 @@ def delete_bot(index):
         if 0 <= index < len(bots):
             bots.pop(index)
             save_bots(bots)
-            return jsonify({"success": True})
-    return jsonify({"success": False})
+            return jsonify({"message": "Bot deleted successfully!"}), 200
+        return jsonify({"error": "Bot not found."}), 404
+    return jsonify({"error": "Unauthorized."}), 403
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Update this line to allow the app to run on all interfaces
+    app.run(host="0.0.0.0", port=5000)
